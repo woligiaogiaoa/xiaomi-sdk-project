@@ -1,0 +1,3 @@
+include ':xiaomi'
+include ':app'
+rootProject.name = "publication-xiaomi"
