@@ -26,7 +26,7 @@ import com.bun.miitmdid.interfaces.IIdentifierListener;
 import com.bun.miitmdid.interfaces.IdSupplier;
 import com.google.gson.Gson;
 import com.jiuwan.publication.BuildConfig;
-import com.jiuwan.publication.PrintIntercepter;
+import com.jiuwan.publication.http.PrintIntercepter;
 import com.lzy.okgo.OkGo;
 import com.lzy.okgo.https.HttpsUtils;
 import com.lzy.okgo.interceptor.HttpLoggingInterceptor;

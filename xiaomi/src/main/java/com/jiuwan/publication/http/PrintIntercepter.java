@@ -1,4 +1,4 @@
-package com.jiuwan.publication;
+package com.jiuwan.publication.http;
 
 import android.text.TextUtils;
 import android.util.Log;
