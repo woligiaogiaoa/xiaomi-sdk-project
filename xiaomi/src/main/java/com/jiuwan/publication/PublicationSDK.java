@@ -5,6 +5,7 @@ import android.app.Application;
 import android.content.Context;
 import android.text.TextUtils;
 import android.util.Log;
+import android.widget.Switch;
 import android.widget.Toast;
 
 import com.jiuwan.publication.callback.ExitCallback;
@@ -14,14 +15,18 @@ import com.jiuwan.publication.callback.ReportCallback;
 import com.jiuwan.publication.callback.VerifyCallback;
 import com.jiuwan.publication.data.DeviceUtils;
 import com.jiuwan.publication.data.GameConfig;
+import com.lzy.okgo.OkGo;
 import com.xiaomi.gamecenter.sdk.MiCommplatform;
 import com.xiaomi.gamecenter.sdk.MiErrorCode;
 import com.xiaomi.gamecenter.sdk.OnInitProcessListener;
 import com.xiaomi.gamecenter.sdk.OnLoginProcessListener;
+import com.xiaomi.gamecenter.sdk.OnPayProcessListener;
 import com.xiaomi.gamecenter.sdk.entry.MiAccountInfo;
 import com.xiaomi.gamecenter.sdk.entry.MiAppInfo;
+import com.xiaomi.gamecenter.sdk.entry.MiBuyInfo;
 
 import java.util.List;
+import java.util.UUID;
 
 public class PublicationSDK {
 
@@ -101,10 +106,47 @@ public class PublicationSDK {
     public static void setPayCallback(PayCallback payCallback) {
 
     }
-
-    public static void pay(Context context, String payInfo) {
-
+                                            //code:小米后台商品code
+    public static void pay(Context context, String payInfo ) {
+        //fixme:创建订单
+        MiBuyInfo miBuyInfo = createMiBuyInfo( payInfo, 1 );
+        try
+        {
+            MiCommplatform.getInstance().miUniPay(mActivity, miBuyInfo, new OnPayProcessListener() {
+                @Override
+                public void finishPayProcess(int i) {
+                    switch (i){
+                        case MiErrorCode.MI_XIAOMI_PAYMENT_SUCCESS:
+                            Toast.makeText( mActivity,"支付成功", Toast.LENGTH_LONG ).show();
+                            break;
+                        case MiErrorCode.MI_XIAOMI_PAYMENT_ERROR_CANCEL:
+                        case MiErrorCode.MI_XIAOMI_PAYMENT_ERROR_PAY_CANCEL:
+                            Toast.makeText( mActivity, "支付取消", Toast.LENGTH_LONG ).show();
+                            break;
+                        case MiErrorCode.MI_XIAOMI_PAYMENT_ERROR_PAY_FAILURE:
+                            Toast.makeText( mActivity, "支付失败", Toast.LENGTH_LONG ).show();
+                            break;
+                        case MiErrorCode.MI_XIAOMI_PAYMENT_ERROR_PAY_REPEAT:
+                            Toast.makeText( mActivity, "you have purchased", Toast.LENGTH_LONG ).show();
+                            break;
+                        case MiErrorCode.MI_XIAOMI_PAYMENT_ERROR_ACTION_EXECUTED:
+                            Toast.makeText( mActivity, "正在处理中，不要重复操作", Toast.LENGTH_SHORT ).show();
+                            break;
+                        case MiErrorCode.MI_XIAOMI_PAYMENT_ERROR_LOGIN_FAIL:
+                            Toast.makeText( mActivity, "请先登录", Toast.LENGTH_LONG ).show();
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            });
+        }
+        catch ( Exception e )
+        {
+            e.printStackTrace();
+        }
     }
+
 
     public static void reportUserGameInfoData(String info, ReportCallback reportCallback) {
 
@@ -118,4 +160,45 @@ public class PublicationSDK {
     public static void exit(Activity context, ExitCallback exitCallback) {
 
     }
+
+
+    private static MiBuyInfo createMiBuyInfo(String productCode, int count )
+    {
+        MiBuyInfo miBuyInfo = new MiBuyInfo();
+        miBuyInfo.setProductCode( productCode );
+        miBuyInfo.setCount( count );
+        //todo:创建订单
+        miBuyInfo.setCpOrderId( UUID.randomUUID().toString() );
+//        Gson gson = new Gson();
+//        Toast.makeText(this,gson.a(miBuyInfo),Toast.LENGTH_LONG).show();
+
+        return miBuyInfo;
+    }
+
+
+    /*--------------------back end functions---------------------------*/
+    private static String baseUrl="https://api.xinglaogame.com/";
+
+    private static String loginApi=baseUrl+"publisher/sdk/v1/huawei/user";
+    ///
+    private static String deliverApi=baseUrl+"publisher/sdk/v1/order/huawei/successful";
+
+    public static final String ORDER_CREATE = baseUrl+"publisher/sdk/v1/order";
+
+ /*   private static void serverLogin(String huaweiToken,String openId, JsonCallback<LzyResponse<SlugBean>> callback){
+        OkGo.<LzyResponse<SlugBean>> post(loginApi)
+                .tag(loginApi)
+                .params("accesstoken",huaweiToken)
+                .params("openid",openId)
+                .execute(callback);
+    }
+
+    public static void deliverProduct(String purchaseToken,String productId, String orderNumber,JsonCallback<SimpleResponse> callback){
+        OkGo.<SimpleResponse> post(deliverApi)
+                .tag(deliverApi)
+                .params("purchaseToken",purchaseToken)
+                .params("productId",productId)
+                .params("order_no",orderNumber)
+                .execute(callback);
+    }*/
 }
