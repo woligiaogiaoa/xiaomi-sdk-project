@@ -5,8 +5,11 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.view.View;
 
 import com.jiuwan.publication.PublicationSDK;
+
+import java.nio.file.FileAlreadyExistsException;
 
 public class SplashActivity extends Activity {
     private static final int CHECK_INTERVAL_MS = 200;
@@ -50,7 +53,7 @@ public class SplashActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_splash);
         mHandler.sendEmptyMessage(MSG_CHECK_MISPLASH);
 
     }

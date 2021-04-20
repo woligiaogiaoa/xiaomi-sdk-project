@@ -2,6 +2,7 @@ package com.jiuwan.mlbbjx.mi;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
 
@@ -13,6 +14,8 @@ import com.xiaomi.gamecenter.sdk.MiCommplatform;
 import com.xiaomi.gamecenter.sdk.MiErrorCode;
 import com.xiaomi.gamecenter.sdk.OnPayProcessListener;
 import com.xiaomi.gamecenter.sdk.entry.MiBuyInfo;
+
+import java.util.UUID;
 
 public class MainActivity extends Activity {
     Activity mActivity;
@@ -62,6 +65,53 @@ public class MainActivity extends Activity {
             MiCommplatform.getInstance().miUniPay(this, miBuyInfo, new OnPayProcessListener() {
                 @Override
                 public void finishPayProcess(int i) {
+                    switch (i){
+                        case MiErrorCode.MI_XIAOMI_PAYMENT_SUCCESS:
+                            Toast.makeText( mActivity,"支付成功", Toast.LENGTH_LONG ).show();
+                            break;
+                        case MiErrorCode.MI_XIAOMI_PAYMENT_ERROR_CANCEL:
+                        case MiErrorCode.MI_XIAOMI_PAYMENT_ERROR_PAY_CANCEL:
+                            Toast.makeText( mActivity, "支付取消", Toast.LENGTH_LONG ).show();
+                            break;
+                        case MiErrorCode.MI_XIAOMI_PAYMENT_ERROR_PAY_FAILURE:
+                            Toast.makeText( mActivity, "支付失败", Toast.LENGTH_LONG ).show();
+                            break;
+                        case MiErrorCode.MI_XIAOMI_PAYMENT_ERROR_PAY_REPEAT:
+                            Toast.makeText( mActivity, "you have purchased", Toast.LENGTH_LONG ).show();
+                            break;
+                        case MiErrorCode.MI_XIAOMI_PAYMENT_ERROR_ACTION_EXECUTED:
+                            Toast.makeText( mActivity, "正在处理中，不要重复操作", Toast.LENGTH_SHORT ).show();
+                            break;
+                        case MiErrorCode.MI_XIAOMI_PAYMENT_ERROR_LOGIN_FAIL:
+                            Toast.makeText( mActivity, "请先登录", Toast.LENGTH_LONG ).show();
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            });
+        }
+        catch ( Exception e )
+        {
+            e.printStackTrace();
+        }
+    }
+
+    public void amountPay(View view) {
+        int money = Integer.parseInt( "1" );
+
+        MiBuyInfo miBuyInfo = new MiBuyInfo();
+        miBuyInfo.setCpOrderId( UUID.randomUUID().toString() );
+        miBuyInfo.setCpUserInfo( "xiaomi_test_001" );
+        miBuyInfo.setAmount( money );
+//                    Gson gson = new Gson();
+//                    Toast.makeText(MiAppPaymentActivity.this,gson.a(miBuyInfo),Toast.LENGTH_LONG).show();
+        try
+        {
+            MiCommplatform.getInstance().miUniPay(this, miBuyInfo, new OnPayProcessListener() {
+                @Override
+                public void finishPayProcess(int i) {
+                    Log.e("fuckpay", "errorCode"+i);
                     switch (i){
                         case MiErrorCode.MI_XIAOMI_PAYMENT_SUCCESS:
                             Toast.makeText( mActivity,"支付成功", Toast.LENGTH_LONG ).show();
