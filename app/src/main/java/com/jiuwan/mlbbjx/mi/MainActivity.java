@@ -10,6 +10,7 @@ import com.google.gson.Gson;
 import com.jiuwan.publication.PublicationSDK;
 import com.jiuwan.publication.callback.LoginCallback;
 import com.jiuwan.publication.pay.HuaweiPayParam;
+import com.xiaomi.gamecenter.sdk.GameInfoField;
 import com.xiaomi.gamecenter.sdk.MiCommplatform;
 import com.xiaomi.gamecenter.sdk.MiErrorCode;
 import com.xiaomi.gamecenter.sdk.OnPayProcessListener;
@@ -45,23 +46,28 @@ public class MainActivity extends Activity {
     }
 
     public void pay(View view) {
-      /*  HuaweiPayParam build = new HuaweiPayParam.Builder()
+        HuaweiPayParam build = new HuaweiPayParam.Builder()
                 .callbackUrl("http://test")
                 .extendData("http://test")
                 .gameOrderNum("testorder123")
-                .price("600")
-                .productId("mlbb1")
-                .productName("6块钱测试")
+                .price("10")
+                .productId("cs1")
+                .productName("1毛钱测试")
                 .roleID("测试1")
                 .roleLevel("1")
                 .roleName("测试13123")
                 .serverID("server001")
                 .serverName("server001")
                 .build();
-        PublicationSDK.pay(this,new Gson().toJson(build));*/
-        try
+        PublicationSDK.paramsPay(build);
+     /*   try
         {
-            MiBuyInfo miBuyInfo = PublicationSDK.createMiBuyInfo( "mlbb1", 1 );
+            //MiBuyInfo miBuyInfo = PublicationSDK.createMiBuyInfo( "mlbb1", 1 );
+            MiBuyInfo miBuyInfo = new MiBuyInfo();
+            miBuyInfo.setProductCode( "cs1" );
+            miBuyInfo.setCount( 1 );
+            //todo:创建订单
+            miBuyInfo.setCpOrderId( "xiaomi-test-"+UUID.randomUUID().toString() );
             MiCommplatform.getInstance().miUniPay(this, miBuyInfo, new OnPayProcessListener() {
                 @Override
                 public void finishPayProcess(int i) {
@@ -94,11 +100,11 @@ public class MainActivity extends Activity {
         catch ( Exception e )
         {
             e.printStackTrace();
-        }
+        }*/
     }
 
     public void amountPay(View view) {
-        int money = Integer.parseInt( "1" );
+        int money = Integer.parseInt( "6" );
 
         MiBuyInfo miBuyInfo = new MiBuyInfo();
         miBuyInfo.setCpOrderId( UUID.randomUUID().toString() );
@@ -106,6 +112,16 @@ public class MainActivity extends Activity {
         miBuyInfo.setAmount( money );
 //                    Gson gson = new Gson();
 //                    Toast.makeText(MiAppPaymentActivity.this,gson.a(miBuyInfo),Toast.LENGTH_LONG).show();
+    /*    //用户信息，网游必须设置、单机游戏或应用可选
+        Bundle mBundle = new Bundle();
+        mBundle.putString( GameInfoField.GAME_USER_BALANCE, "1000" );   //用户余额
+        mBundle.putString( GameInfoField.GAME_USER_GAMER_VIP, "vip0" );  //vip等级
+        mBundle.putString( GameInfoField.GAME_USER_LV, "20" );           //角色等级
+        mBundle.putString( GameInfoField.GAME_USER_PARTY_NAME, "猎人" );  //工会，帮派
+        mBundle.putString( GameInfoField.GAME_USER_ROLE_NAME, "meteor" ); //角色名称
+        mBundle.putString( GameInfoField.GAME_USER_ROLEID, "123456" );    //角色id
+        mBundle.putString( GameInfoField.GAME_USER_SERVER_NAME, "峡谷" );  //所在服务器
+        miBuyInfo.setExtraInfo( mBundle ); //设置用户信息*/
         try
         {
             MiCommplatform.getInstance().miUniPay(this, miBuyInfo, new OnPayProcessListener() {

@@ -17,6 +17,7 @@ import com.jiuwan.publication.data.DeviceUtils;
 import com.jiuwan.publication.data.GameConfig;
 import com.jiuwan.publication.http.JsonCallback;
 import com.jiuwan.publication.http.LzyResponse;
+import com.jiuwan.publication.login.SlugBean;
 import com.jiuwan.publication.pay.HuaweiPayParam;
 import com.jiuwan.publication.pay.OrderNumberBean;
 import com.jiuwan.publication.pay.OrderUtil;
@@ -101,7 +102,24 @@ public class PublicationSDK {
                             + "\nsessionId:" + accountInfo.getSessionId()
                             + "\nnikeName:" + accountInfo.getNikename());
                     //todo :called after server login
-                    loginCallback.onSuccess(session);
+                    serverLogin(accountInfo.getUid(), accountInfo.getSessionId(), new JsonCallback<LzyResponse<SlugBean>>() {
+                        @Override
+                        public void onSuccess(Response<LzyResponse<SlugBean>> response) {
+                            if(response!=null && response.body()!=null&& response.body().data!=null){
+                                SlugBean data = response.body().data;
+                                loginCallback.onSuccess(data.getSlug());
+                            }
+                            else {
+                                loginCallback.onFailure("empty user",-1);
+                            }
+                        }
+
+                        @Override
+                        public void onError(String errorMsg, int code) {
+                            super.onError(errorMsg, code);
+                            loginCallback.onFailure(errorMsg,code);
+                        }
+                    });
                 } else if (MiErrorCode.MI_XIAOMI_PAYMENT_ERROR_ACTION_EXECUTED == arg0) {
                     //handler.sendEmptyMessage(MSG_DO_NOT_REPEAT_OPERATION);
                     loginCallback.onFailure("不要重复操作",MiErrorCode.MI_XIAOMI_PAYMENT_ERROR_ACTION_EXECUTED);
@@ -167,7 +185,7 @@ public class PublicationSDK {
         }
     }
 
-    private static void paramsPay(HuaweiPayParam platformPayParam) {
+    public static void paramsPay(HuaweiPayParam platformPayParam) {
         Log.e(TAG, "paramsPay: "+platformPayParam.toString() );
         TreeMap paramsMap =  new TreeMap<String, String>();
         paramsMap.put("game_num", platformPayParam.getGameOrderNum());
@@ -182,7 +200,7 @@ public class PublicationSDK {
         paramsMap.put("sign", OrderUtil.encryptPaySign(mActivity, paramsMap));
         //platformPayParam.price=fen2yuan(platformPayParam.price) //price String ext :6.00
         //mainActivity?.showProgress("")
-        String inAppProductId=    "mlbb1" ;           //platformPayParam.productId; //todo:匹配小米的 product code
+        String inAppProductId= "cs1" ;           //platformPayParam.productId; //todo:匹配小米的 product code
         OkGo.<LzyResponse<OrderNumberBean>>post(ORDER_CREATE)
                 .tag(ORDER_CREATE)
                 .params(paramsMap)
@@ -192,7 +210,13 @@ public class PublicationSDK {
                         if(response.body()!=null && response.body().data!=null){
                             OrderNumberBean data = response.body().data;
                             //fixme:根据支付参数 去匹配 code
-                            MiBuyInfo miBuyInfo = createMiBuyInfo( inAppProductId, 1 );
+                            //MiBuyInfo miBuyInfo = createMiBuyInfo( inAppProductId, 1 );
+                            MiBuyInfo miBuyInfo = new MiBuyInfo();
+                            miBuyInfo.setProductCode( inAppProductId );
+                            miBuyInfo.setCount( 1 );
+                            //todo:创建订单
+                            miBuyInfo.setCpOrderId( data.getNumber());
+                            miBuyInfo.setCpUserInfo(data.getNumber());
                             try
                             {
                                 MiCommplatform.getInstance().miUniPay(mActivity, miBuyInfo, new OnPayProcessListener() {
@@ -271,21 +295,21 @@ public class PublicationSDK {
     /*--------------------back end functions---------------------------*/
     private static String baseUrl="https://api.xinglaogame.com/";
 
-    private static String loginApi=baseUrl+"publisher/sdk/v1/huawei/user";
+    private static String loginApi=baseUrl+"publisher/sdk/v1/xm/user";
     ///
     private static String deliverApi=baseUrl+"publisher/sdk/v1/order/huawei/successful";
 
     public static final String ORDER_CREATE = baseUrl+"publisher/sdk/v1/order";
 
- /*   private static void serverLogin(String huaweiToken,String openId, JsonCallback<LzyResponse<SlugBean>> callback){
+    private static void serverLogin(String uid,String session, JsonCallback<LzyResponse<SlugBean>> callback){
         OkGo.<LzyResponse<SlugBean>> post(loginApi)
                 .tag(loginApi)
-                .params("accesstoken",huaweiToken)
-                .params("openid",openId)
+                .params("uid",uid)
+                .params("m_session",session)
                 .execute(callback);
     }
 
-    public static void deliverProduct(String purchaseToken,String productId, String orderNumber,JsonCallback<SimpleResponse> callback){
+  /*  public static void deliverProduct(String purchaseToken,String productId, String orderNumber,JsonCallback<SimpleResponse> callback){
         OkGo.<SimpleResponse> post(deliverApi)
                 .tag(deliverApi)
                 .params("purchaseToken",purchaseToken)
