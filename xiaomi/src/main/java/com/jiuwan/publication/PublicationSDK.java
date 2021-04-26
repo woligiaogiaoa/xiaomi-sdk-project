@@ -200,7 +200,7 @@ public class PublicationSDK {
         paramsMap.put("sign", OrderUtil.encryptPaySign(mActivity, paramsMap));
         //platformPayParam.price=fen2yuan(platformPayParam.price) //price String ext :6.00
         //mainActivity?.showProgress("")
-        String inAppProductId= "cs1" ;           //platformPayParam.productId; //todo:匹配小米的 product code
+        String inAppProductId= platformPayParam.productId ;           //platformPayParam.productId; //todo:匹配小米的 product code
         OkGo.<LzyResponse<OrderNumberBean>>post(ORDER_CREATE)
                 .tag(ORDER_CREATE)
                 .params(paramsMap)
