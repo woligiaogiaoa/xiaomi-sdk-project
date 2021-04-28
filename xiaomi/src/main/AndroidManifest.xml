@@ -97,6 +97,13 @@
             android:theme="@android:style/Theme.Translucent.NoTitleBar"
             android:screenOrientation="behind"/>
 
+        <!--jiuwan sdk custom activity -->
+        <activity android:name=".basedialog.DialogActivity"
+            android:configChanges="orientation|screenSize|keyboardHidden"
+            android:launchMode="singleTop"
+            android:theme="@style/JiuwanSdkDialogActivityTheme">
+        </activity>
+
         <!-- Xiaomi SDK Need End-->
     </application>
 

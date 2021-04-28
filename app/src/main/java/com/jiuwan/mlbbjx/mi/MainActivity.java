@@ -1,6 +1,7 @@
 package com.jiuwan.mlbbjx.mi;
 
 import android.app.Activity;
+import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -13,8 +14,11 @@ import com.jiuwan.publication.pay.HuaweiPayParam;
 import com.xiaomi.gamecenter.sdk.GameInfoField;
 import com.xiaomi.gamecenter.sdk.MiCommplatform;
 import com.xiaomi.gamecenter.sdk.MiErrorCode;
+import com.xiaomi.gamecenter.sdk.OnExitListner;
 import com.xiaomi.gamecenter.sdk.OnPayProcessListener;
 import com.xiaomi.gamecenter.sdk.entry.MiBuyInfo;
+
+import org.json.JSONObject;
 
 import java.util.UUID;
 
@@ -26,7 +30,6 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         mActivity=this;
-        MiCommplatform.getInstance().onUserAgreed(this);
         PublicationSDK.onCreate(this);
         PublicationSDK.setLoginCallback(new LoginCallback() {
             @Override
@@ -46,7 +49,7 @@ public class MainActivity extends Activity {
     }
 
     public void pay(View view) {
-        HuaweiPayParam build = new HuaweiPayParam.Builder()
+       /* HuaweiPayParam build = new HuaweiPayParam.Builder()
                 .callbackUrl("http://test")
                 .extendData("http://test")
                 .gameOrderNum("testorder123")
@@ -59,7 +62,8 @@ public class MainActivity extends Activity {
                 .serverID("server001")
                 .serverName("server001")
                 .build();
-        PublicationSDK.paramsPay(build);
+        PublicationSDK.paramsPay(build);*/
+        test();
      /*   try
         {
             //MiBuyInfo miBuyInfo = PublicationSDK.createMiBuyInfo( "mlbb1", 1 );
@@ -103,6 +107,74 @@ public class MainActivity extends Activity {
         }*/
     }
 
+    private void test() {
+        Gson gson=new Gson();
+        String s = gson.toJson(new H5testBean(
+                "test1234234",
+                "600",
+                "test6kuaiqian",
+                "role_123213",
+                "role_shuaige",
+                "server_213213",
+                "server_name12321",
+                "1",
+                "https://www.justtest.cn",
+                ""
+
+        ));
+        PublicationSDK.pay(this,s);
+    }
+
+    @Override
+    public void onBackPressed() {
+        MiCommplatform.getInstance().miAppExit( this, new OnExitListner()
+        {
+            @Override
+            public void onExit( int code )
+            {
+                if ( code == MiErrorCode.MI_XIAOMI_EXIT )
+                {
+                    android.os.Process.killProcess( android.os.Process.myPid() );
+                }
+            }
+        } );
+
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        PublicationSDK.onActivityResult(requestCode, resultCode, data);
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    /*-----useless------*/
     public void amountPay(View view) {
         int money = Integer.parseInt( "6" );
 

@@ -3,11 +3,18 @@ package com.jiuwan.publication;
 import android.app.Activity;
 import android.app.Application;
 import android.content.Context;
+import android.content.Intent;
+import android.preference.PreferenceManager;
+import android.print.PageRange;
+import android.support.v4.app.FragmentActivity;
 import android.text.TextUtils;
 import android.util.Log;
 import android.widget.Switch;
 import android.widget.Toast;
 
+import com.google.gson.Gson;
+import com.jiuwan.publication.basedialog.AgreementDialogFragment;
+import com.jiuwan.publication.basedialog.DialogActivity;
 import com.jiuwan.publication.callback.ExitCallback;
 import com.jiuwan.publication.callback.LoginCallback;
 import com.jiuwan.publication.callback.PayCallback;
@@ -17,7 +24,9 @@ import com.jiuwan.publication.data.DeviceUtils;
 import com.jiuwan.publication.data.GameConfig;
 import com.jiuwan.publication.http.JsonCallback;
 import com.jiuwan.publication.http.LzyResponse;
+import com.jiuwan.publication.login.ChannelUser;
 import com.jiuwan.publication.login.SlugBean;
+import com.jiuwan.publication.pay.GoodsAndPrivacy;
 import com.jiuwan.publication.pay.HuaweiPayParam;
 import com.jiuwan.publication.pay.OrderNumberBean;
 import com.jiuwan.publication.pay.OrderUtil;
@@ -35,9 +44,14 @@ import com.xiaomi.gamecenter.sdk.entry.MiBuyInfo;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.security.PrivateKey;
+import java.util.Collections;
 import java.util.List;
 import java.util.TreeMap;
 import java.util.UUID;
+
+import static android.app.Activity.RESULT_OK;
+import static com.jiuwan.publication.basedialog.AgreementDialogFragment.AGREE_KEY;
 
 public class PublicationSDK {
 
@@ -70,7 +84,23 @@ public class PublicationSDK {
                 miSplashEnd = true;//游戏自己的闪屏处理，可参考SplashActivity的实现
             }
         });
+        getGoodsAndPrivavy();
 
+    }
+
+    public static GoodsAndPrivacy goodsAndPrivacy;
+
+    private static void getGoodsAndPrivavy() {
+        channelInit(new JsonCallback<LzyResponse<GoodsAndPrivacy>>() {
+            @Override
+            public void onSuccess(Response<LzyResponse<GoodsAndPrivacy>> response) {
+                if(response!=null ){
+                    if(response.body()!=null){
+                        goodsAndPrivacy=response.body().data;
+                    }
+                }
+            }
+        });
     }
 
     private PublicationSDK(){}
@@ -79,6 +109,8 @@ public class PublicationSDK {
 
 
     private static String session;
+
+    private static final int CODE_PRIVACY= 12121;
 
 
     private static MiAccountInfo accountInfo;
@@ -89,46 +121,124 @@ public class PublicationSDK {
         loginCallback=a1;
     }
 
-    public static void login(final Context context) {
-        MiCommplatform.getInstance().miLogin(mActivity, new OnLoginProcessListener() {
-            @Override
-            public void finishLoginProcess(int arg0, MiAccountInfo arg1) {
-                if (MiErrorCode.MI_XIAOMI_PAYMENT_SUCCESS == arg0) {
-                    accountInfo = arg1;
-                    session = arg1.getSessionId();
-                    //handler.sendEmptyMessage(MSG_LOGIN_SUCCESS);
-                    Log.e("FUC", ""
-                            + "\nuid:" + accountInfo.getUid()
-                            + "\nsessionId:" + accountInfo.getSessionId()
-                            + "\nnikeName:" + accountInfo.getNikename());
-                    //todo :called after server login
-                    serverLogin(accountInfo.getUid(), accountInfo.getSessionId(), new JsonCallback<LzyResponse<SlugBean>>() {
-                        @Override
-                        public void onSuccess(Response<LzyResponse<SlugBean>> response) {
-                            if(response!=null && response.body()!=null&& response.body().data!=null){
-                                SlugBean data = response.body().data;
-                                loginCallback.onSuccess(data.getSlug());
-                            }
-                            else {
-                                loginCallback.onFailure("empty user",-1);
-                            }
-                        }
+    public static void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if(requestCode ==CODE_PRIVACY ){
+            if(resultCode == RESULT_OK){
+                int a =5;
+                int b =5;
+                int c=a+b;
+                MiCommplatform.getInstance().onUserAgreed(mActivity);
+                MiCommplatform.getInstance().miLogin(mActivity, new OnLoginProcessListener() {
+                    @Override
+                    public void finishLoginProcess(int arg0, MiAccountInfo arg1) {
+                        if (MiErrorCode.MI_XIAOMI_PAYMENT_SUCCESS == arg0) {
+                            accountInfo = arg1;
+                            session = arg1.getSessionId();
+                            //handler.sendEmptyMessage(MSG_LOGIN_SUCCESS);
+                            Log.e("FUC", ""
+                                    + "\nuid:" + accountInfo.getUid()
+                                    + "\nsessionId:" + accountInfo.getSessionId()
+                                    + "\nnikeName:" + accountInfo.getNikename());
+                            //todo :called after server login
+                            serverLogin(accountInfo.getUid(), accountInfo.getSessionId(), new JsonCallback<LzyResponse<SlugBean>>() {
+                                @Override
+                                public void onSuccess(Response<LzyResponse<SlugBean>> response) {
+                                    if(response!=null && response.body()!=null&& response.body().data!=null){
+                                        SlugBean data = response.body().data;
+                                        String auth = response.getRawResponse().header(KEY_HTTP_AUTH_HEADER);
+                                        loginCallback.onSuccess(new Gson().toJson(
+                                                new ChannelUser(data.getSlug(),auth!=null?  auth :""  )
+                                        ));
+                                        //mayebe we also want to get goods here if previous rerquest failed
+                                        if(goodsAndPrivacy==null)
+                                            getGoodsAndPrivavy();
+                                    }
+                                    else {
+                                        loginCallback.onFailure("empty user",-1);
+                                    }
+                                }
 
-                        @Override
-                        public void onError(String errorMsg, int code) {
-                            super.onError(errorMsg, code);
-                            loginCallback.onFailure(errorMsg,code);
+                                @Override
+                                public void onError(String errorMsg, int code) {
+                                    super.onError(errorMsg, code);
+                                    loginCallback.onFailure(errorMsg,code);
+                                }
+                            });
+                        } else if (MiErrorCode.MI_XIAOMI_PAYMENT_ERROR_ACTION_EXECUTED == arg0) {
+                            //handler.sendEmptyMessage(MSG_DO_NOT_REPEAT_OPERATION);
+                            loginCallback.onFailure("不要重复操作",MiErrorCode.MI_XIAOMI_PAYMENT_ERROR_ACTION_EXECUTED);
+                        } else {
+                            //handler.sendEmptyMessage(MSG_LOGIN_FAILED);
+                            loginCallback.onFailure("登陆失败",-1);
                         }
-                    });
-                } else if (MiErrorCode.MI_XIAOMI_PAYMENT_ERROR_ACTION_EXECUTED == arg0) {
-                    //handler.sendEmptyMessage(MSG_DO_NOT_REPEAT_OPERATION);
-                    loginCallback.onFailure("不要重复操作",MiErrorCode.MI_XIAOMI_PAYMENT_ERROR_ACTION_EXECUTED);
-                } else {
-                    //handler.sendEmptyMessage(MSG_LOGIN_FAILED);
-                    loginCallback.onFailure("登陆失败",-1);
-                }
+                    }
+                });
             }
-        });
+            else {
+                loginCallback.onFailure("user privacy error",-1);
+            }
+        }
+    }
+
+    public static void login(final Context context) {
+        boolean agree= PreferenceManager.getDefaultSharedPreferences(context).getBoolean(AGREE_KEY,false);
+        if(!agree){
+            try {
+                Intent intent=new Intent(mActivity, DialogActivity.class);
+                mActivity.startActivityForResult(intent,CODE_PRIVACY);
+            } catch (Exception e) {
+                e.printStackTrace();
+                loginCallback.onFailure("user privacy error",-1);
+            }
+        }else {
+            MiCommplatform.getInstance().onUserAgreed(mActivity);
+            MiCommplatform.getInstance().miLogin(mActivity, new OnLoginProcessListener() {
+                @Override
+                public void finishLoginProcess(int arg0, MiAccountInfo arg1) {
+                    if (MiErrorCode.MI_XIAOMI_PAYMENT_SUCCESS == arg0) {
+                        accountInfo = arg1;
+                        session = arg1.getSessionId();
+                        //handler.sendEmptyMessage(MSG_LOGIN_SUCCESS);
+                        Log.e("FUC", ""
+                                + "\nuid:" + accountInfo.getUid()
+                                + "\nsessionId:" + accountInfo.getSessionId()
+                                + "\nnikeName:" + accountInfo.getNikename());
+                        //todo :called after server login
+                        serverLogin(accountInfo.getUid(), accountInfo.getSessionId(), new JsonCallback<LzyResponse<SlugBean>>() {
+                            @Override
+                            public void onSuccess(Response<LzyResponse<SlugBean>> response) {
+                                if(response!=null && response.body()!=null&& response.body().data!=null){
+                                    SlugBean data = response.body().data;
+                                    String auth = response.getRawResponse().header(KEY_HTTP_AUTH_HEADER);
+                                    loginCallback.onSuccess(new Gson().toJson(
+                                            new ChannelUser(data.getSlug(),auth!=null?  auth :""  )
+                                    ));
+                                    //mayebe we also want to get goods here if previous rerquest failed
+                                    if(goodsAndPrivacy==null)
+                                        getGoodsAndPrivavy();
+                                }
+                                else {
+                                    loginCallback.onFailure("empty user",-1);
+                                }
+                            }
+
+                            @Override
+                            public void onError(String errorMsg, int code) {
+                                super.onError(errorMsg, code);
+                                loginCallback.onFailure(errorMsg,code);
+                            }
+                        });
+                    } else if (MiErrorCode.MI_XIAOMI_PAYMENT_ERROR_ACTION_EXECUTED == arg0) {
+                        //handler.sendEmptyMessage(MSG_DO_NOT_REPEAT_OPERATION);
+                        loginCallback.onFailure("不要重复操作",MiErrorCode.MI_XIAOMI_PAYMENT_ERROR_ACTION_EXECUTED);
+                    } else {
+                        //handler.sendEmptyMessage(MSG_LOGIN_FAILED);
+                        loginCallback.onFailure("登陆失败",-1);
+                    }
+                }
+            });
+        }
+
     }
 
     public static void onCreate(final Activity activity) {
@@ -140,7 +250,7 @@ public class PublicationSDK {
     }
 
     //json pay
-    //fixme:对外暴露 ？
+    //fixme:对外暴露
     public static void pay(Context context, String payInfo ) {
         jsonPay(payInfo);
     }
@@ -153,20 +263,49 @@ public class PublicationSDK {
 
     public static String TAG="SDK-XIAOMI";
 
+    private static String checkAmount(String amount,String ProductId){
+        if(goodsAndPrivacy==null) return null;
+
+        try {
+            GoodsAndPrivacy.Good target=null;
+
+            for (GoodsAndPrivacy.Good good : goodsAndPrivacy.getGoods()) {
+                if(good.getCp_id().equals(ProductId)){
+                    target =good;
+                    break;
+                }
+            }
+            if(target==null) return null;
+            Float yuan=Float.parseFloat(target.getMoney());
+            Integer fen=(int)(yuan * 100);
+            return fen.toString().equals(amount) ? target.getC_id() : null;
+        }catch (Exception e ){
+            return  null;
+        }
+    }
+
     public static void h5OrderJsonPay(String orderJson){ //需要游戏传过来 huawei 的 productId
         try {
+            if(goodsAndPrivacy==null){
+                Log.e(TAG, "h5OrderJsonPay: 获取商品列表失败" );
+                return;
+            }
             JSONObject jsonObject = new JSONObject(orderJson);
             String gameNum = jsonObject.optString("game_num", "");
             String amount = jsonObject.optString("value", "");
-            //String slug = jsonObject.optString("slug", "");
             String productName = jsonObject.optString("props_name", "");
             String roleName = jsonObject.optString("role_name", "");
             String roleId = jsonObject.optString("role_id", "");
             String serverId = jsonObject.optString("server_id", "");
             String serverName = jsonObject.optString("server_name", "");
-            String productID = jsonObject.optString("productID", "-1");
+            String productID = jsonObject.optString("productID", "");
             String callbackUrl = jsonObject.optString("callback_url", "");
             String extendData = jsonObject.optString("extend_data", "");
+            String inAppId=checkAmount(amount,productID);
+            if(TextUtils.isEmpty(checkAmount(amount,productID))){
+                Log.e(TAG, "h5OrderJsonPay: 金额校验失败" );
+                return;
+            }
             HuaweiPayParam huaweiPayParam = new HuaweiPayParam.Builder()
                     .gameOrderNum(gameNum)
                     .price(amount)
@@ -176,7 +315,7 @@ public class PublicationSDK {
                     .serverID(serverId)
                     .serverName(serverName)
                     .callbackUrl(callbackUrl)
-                    .productId(productID)
+                    .productId(inAppId) //inapppay id
                     .extendData(extendData)
                     .build();
             paramsPay(huaweiPayParam);
@@ -185,6 +324,9 @@ public class PublicationSDK {
         }
     }
 
+
+
+    //we use it if we already validated amount and product id
     public static void paramsPay(HuaweiPayParam platformPayParam) {
         Log.e(TAG, "paramsPay: "+platformPayParam.toString() );
         TreeMap paramsMap =  new TreeMap<String, String>();
@@ -209,8 +351,6 @@ public class PublicationSDK {
                     public void onSuccess(Response<LzyResponse<OrderNumberBean>> response) {
                         if(response.body()!=null && response.body().data!=null){
                             OrderNumberBean data = response.body().data;
-                            //fixme:根据支付参数 去匹配 code
-                            //MiBuyInfo miBuyInfo = createMiBuyInfo( inAppProductId, 1 );
                             MiBuyInfo miBuyInfo = new MiBuyInfo();
                             miBuyInfo.setProductCode( inAppProductId );
                             miBuyInfo.setCount( 1 );
@@ -300,7 +440,6 @@ public class PublicationSDK {
     private static String deliverApi=baseUrl+"publisher/sdk/v1/order/huawei/successful";
 
     public static final String ORDER_CREATE = baseUrl+"publisher/sdk/v1/order";
-
     private static void serverLogin(String uid,String session, JsonCallback<LzyResponse<SlugBean>> callback){
         OkGo.<LzyResponse<SlugBean>> post(loginApi)
                 .tag(loginApi)
@@ -309,12 +448,30 @@ public class PublicationSDK {
                 .execute(callback);
     }
 
-  /*  public static void deliverProduct(String purchaseToken,String productId, String orderNumber,JsonCallback<SimpleResponse> callback){
-        OkGo.<SimpleResponse> post(deliverApi)
-                .tag(deliverApi)
-                .params("purchaseToken",purchaseToken)
-                .params("productId",productId)
-                .params("order_no",orderNumber)
+    public static final String CHANNEL_INIT = baseUrl+"publisher/sdk/v1/channel";
+
+
+    public static void channelInit(JsonCallback<LzyResponse<GoodsAndPrivacy>> callback){
+        OkGo.<LzyResponse<GoodsAndPrivacy>>
+                get(CHANNEL_INIT)
+                .tag(CHANNEL_INIT)
                 .execute(callback);
-    }*/
+    }
+
+
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
