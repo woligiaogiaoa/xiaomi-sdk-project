@@ -39,7 +39,7 @@ public class MainActivity extends Activity {
 
             @Override
             public void onFailure(String msg, int code) {
-                Toast.makeText(MainActivity.this,msg,Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this,"hahhahahahaahhaha"+msg,Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -111,7 +111,7 @@ public class MainActivity extends Activity {
         Gson gson=new Gson();
         String s = gson.toJson(new H5testBean(
                 "test1234234",
-                "600",
+                "1200",
                 "test6kuaiqian",
                 "role_123213",
                 "role_shuaige",

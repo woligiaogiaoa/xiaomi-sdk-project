@@ -1,4 +1,4 @@
-package com.jiuwan.publication;
+        package com.jiuwan.publication;
 
 import android.app.Activity;
 import android.app.Application;
@@ -124,13 +124,11 @@ public class PublicationSDK {
     public static void onActivityResult(int requestCode, int resultCode, Intent data) {
         if(requestCode ==CODE_PRIVACY ){
             if(resultCode == RESULT_OK){
-                int a =5;
-                int b =5;
-                int c=a+b;
                 MiCommplatform.getInstance().onUserAgreed(mActivity);
                 MiCommplatform.getInstance().miLogin(mActivity, new OnLoginProcessListener() {
                     @Override
                     public void finishLoginProcess(int arg0, MiAccountInfo arg1) {
+                        Log.e(TAG, "finishLoginProcess: code:"+arg0 );
                         if (MiErrorCode.MI_XIAOMI_PAYMENT_SUCCESS == arg0) {
                             accountInfo = arg1;
                             session = arg1.getSessionId();
@@ -257,8 +255,137 @@ public class PublicationSDK {
 
     //PAY  by json order info
     public static void jsonPay(String payInfo ) {
-        //fixme:创建订单
-        h5OrderJsonPay(payInfo);
+        //小米内购，注释掉
+        //h5OrderJsonPay(payInfo);
+        //金额付费
+        amountJsonPay(payInfo);
+    }
+
+    private static void amountJsonPay(String payInfo) {
+        try {
+           /* if(goodsAndPrivacy==null){
+                Log.e(TAG, "h5OrderJsonPay: 获取商品列表失败" );
+                return;
+            }*/
+            JSONObject jsonObject = new JSONObject(payInfo);
+            String gameNum = jsonObject.optString("game_num", "");
+            String amount = jsonObject.optString("fs_value", "");
+            if(TextUtils.isEmpty(amount)){
+                amount=jsonObject.optString("value", "");
+            }
+
+            String productName = jsonObject.optString("props_name", "");
+            String roleName = jsonObject.optString("role_name", "");
+            String roleId = jsonObject.optString("role_id", "");
+            String serverId = jsonObject.optString("server_id", "");
+            String serverName = jsonObject.optString("server_name", "");
+            String productID = jsonObject.optString("productID", "");
+            String callbackUrl = jsonObject.optString("callback_url", "");
+            String extendData = jsonObject.optString("extend_data", "");
+           /* String inAppId=checkAmount(amount,productID);
+            if(TextUtils.isEmpty(checkAmount(amount,productID))){
+                Log.e(TAG, "h5OrderJsonPay: 金额校验失败" );
+                return;
+            }*/
+            HuaweiPayParam huaweiPayParam = new HuaweiPayParam.Builder()
+                    .gameOrderNum(gameNum)
+                    .price(amount)
+                    .productName(productName)
+                    .roleName(roleName)
+                    .roleID(roleId)
+                    .serverID(serverId)
+                    .serverName(serverName)
+                    .callbackUrl(callbackUrl)
+                    .productId(productID) //inapppay id
+                    .extendData(extendData)
+                    .build();
+            paramsAmoutPay(huaweiPayParam);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void paramsAmoutPay(HuaweiPayParam platformPayParam){
+        Log.e(TAG, "paramsPay: "+platformPayParam.toString() );
+        TreeMap paramsMap =  new TreeMap<String, String>();
+        paramsMap.put("game_num", platformPayParam.getGameOrderNum());
+        paramsMap.put("value",platformPayParam.getPrice()); //分
+        paramsMap.put("props_name",platformPayParam.getProductName());
+        paramsMap.put("callback_url",platformPayParam.getCallbackUrl());
+        paramsMap.put("extend_data",platformPayParam.getExtendData());
+        paramsMap.put("server_id",platformPayParam.getServerID());
+        paramsMap.put("server_name",platformPayParam.getServerName());
+        paramsMap.put("role_id",platformPayParam.getRoleID());
+        paramsMap.put("role_name",platformPayParam.getRoleName());
+        paramsMap.put("sign", OrderUtil.encryptPaySign(mActivity, paramsMap));
+        //platformPayParam.price=fen2yuan(platformPayParam.price) //price String ext :6.00
+        //mainActivity?.showProgress("")
+        String gameProId= platformPayParam.productId ;           //platformPayParam.productId; //todo:匹配小米的 product code
+        OkGo.<LzyResponse<OrderNumberBean>>post(ORDER_CREATE)
+                .tag(ORDER_CREATE)
+                .params(paramsMap)
+                .execute(new JsonCallback<LzyResponse<OrderNumberBean>>() {
+                    @Override
+                    public void onSuccess(Response<LzyResponse<OrderNumberBean>> response) {
+                        if(response.body()!=null && response.body().data!=null){
+                            OrderNumberBean data = response.body().data;
+                           /* MiBuyInfo miBuyInfo = new MiBuyInfo();
+                            miBuyInfo.setProductCode( gameProId );
+                            miBuyInfo.setCount( 1 );
+                            miBuyInfo.setCpOrderId( data.getNumber());
+                            miBuyInfo.setCpUserInfo(data.getNumber());*/
+                            int fen = Integer.parseInt( platformPayParam.getPrice() );
+                            int yuan= (int)((float)fen /100);
+                            Log.e(TAG, "paramsAmoutPay yuan: "+yuan);
+
+                            MiBuyInfo miBuyInfo = new MiBuyInfo();
+                            miBuyInfo.setCpOrderId( data.getNumber() );
+                            miBuyInfo.setCpUserInfo( data.getNumber() );
+                            miBuyInfo.setAmount( yuan );
+                            try
+                            {
+                                MiCommplatform.getInstance().miUniPay(mActivity, miBuyInfo, new OnPayProcessListener() {
+                                    @Override
+                                    public void finishPayProcess(int i) {
+                                        switch (i){
+                                            case MiErrorCode.MI_XIAOMI_PAYMENT_SUCCESS:
+                                                Toast.makeText( mActivity,"支付成功", Toast.LENGTH_LONG ).show();
+                                                break;
+                                            case MiErrorCode.MI_XIAOMI_PAYMENT_ERROR_CANCEL:
+                                            case MiErrorCode.MI_XIAOMI_PAYMENT_ERROR_PAY_CANCEL:
+                                                Toast.makeText( mActivity, "支付取消", Toast.LENGTH_LONG ).show();
+                                                break;
+                                            case MiErrorCode.MI_XIAOMI_PAYMENT_ERROR_PAY_FAILURE:
+                                                Toast.makeText( mActivity, "支付失败", Toast.LENGTH_LONG ).show();
+                                                break;
+                                            case MiErrorCode.MI_XIAOMI_PAYMENT_ERROR_PAY_REPEAT:
+                                                Toast.makeText( mActivity, "you have purchased", Toast.LENGTH_LONG ).show();
+                                                break;
+                                            case MiErrorCode.MI_XIAOMI_PAYMENT_ERROR_ACTION_EXECUTED:
+                                                Toast.makeText( mActivity, "正在处理中，不要重复操作", Toast.LENGTH_SHORT ).show();
+                                                break;
+                                            case MiErrorCode.MI_XIAOMI_PAYMENT_ERROR_LOGIN_FAIL:
+                                                Toast.makeText( mActivity, "请先登录", Toast.LENGTH_LONG ).show();
+                                                break;
+                                            default:
+                                                break;
+                                        }
+                                    }
+                                });
+                            }
+                            catch ( Exception e )
+                            {
+                                e.printStackTrace();
+                            }
+                        }
+                    }
+
+                    @Override
+                    public void onError(String errorMsg, int code) {
+                        Toast.makeText(
+                                mActivity,errorMsg,Toast.LENGTH_SHORT).show();
+                    }
+                });
     }
 
     public static String TAG="SDK-XIAOMI";
