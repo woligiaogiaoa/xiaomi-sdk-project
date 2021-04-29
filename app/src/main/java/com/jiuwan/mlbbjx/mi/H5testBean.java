@@ -2,7 +2,7 @@ package com.jiuwan.mlbbjx.mi;
 
 class H5testBean {
     String game_num;
-    String value;
+    String fs_value;
     String props_name;
     String role_id;
     String role_name;
@@ -12,9 +12,9 @@ class H5testBean {
     String callback_url;
     String extend_data;
 
-    public H5testBean(String game_num, String value, String props_name, String role_id, String role_name, String server_id, String server_name, String productID, String callback_url, String extend_data) {
+    public H5testBean(String game_num, String fs_value, String props_name, String role_id, String role_name, String server_id, String server_name, String productID, String callback_url, String extend_data) {
         this.game_num = game_num;
-        this.value = value;
+        this.fs_value = fs_value;
         this.props_name = props_name;
         this.role_id = role_id;
         this.role_name = role_name;
@@ -33,12 +33,12 @@ class H5testBean {
         this.game_num = game_num;
     }
 
-    public String getValue() {
-        return value;
+    public String getFs_value() {
+        return fs_value;
     }
 
-    public void setValue(String value) {
-        this.value = value;
+    public void setFs_value(String fs_value) {
+        this.fs_value = fs_value;
     }
 
     public String getProps_name() {

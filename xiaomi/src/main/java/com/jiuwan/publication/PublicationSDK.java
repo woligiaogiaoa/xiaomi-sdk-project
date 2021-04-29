@@ -90,7 +90,7 @@ public class PublicationSDK {
 
     public static GoodsAndPrivacy goodsAndPrivacy;
 
-    private static void getGoodsAndPrivavy() {
+    public static void getGoodsAndPrivavy() {
         channelInit(new JsonCallback<LzyResponse<GoodsAndPrivacy>>() {
             @Override
             public void onSuccess(Response<LzyResponse<GoodsAndPrivacy>> response) {
@@ -292,7 +292,10 @@ public class PublicationSDK {
             }
             JSONObject jsonObject = new JSONObject(orderJson);
             String gameNum = jsonObject.optString("game_num", "");
-            String amount = jsonObject.optString("value", "");
+            String amount = jsonObject.optString("fs_value", "");
+            if(TextUtils.isEmpty(amount)){
+                amount=jsonObject.optString("value", "");
+            }
             String productName = jsonObject.optString("props_name", "");
             String roleName = jsonObject.optString("role_name", "");
             String roleId = jsonObject.optString("role_id", "");
