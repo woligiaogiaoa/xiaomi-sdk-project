@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.Application;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.print.PageRange;
 import android.support.v4.app.FragmentActivity;
@@ -32,6 +33,7 @@ import com.jiuwan.publication.pay.OrderNumberBean;
 import com.jiuwan.publication.pay.OrderUtil;
 import com.lzy.okgo.OkGo;
 import com.lzy.okgo.model.Response;
+import com.xiaomi.gamecenter.sdk.GameInfoField;
 import com.xiaomi.gamecenter.sdk.MiCommplatform;
 import com.xiaomi.gamecenter.sdk.MiErrorCode;
 import com.xiaomi.gamecenter.sdk.OnInitProcessListener;
@@ -282,11 +284,12 @@ public class PublicationSDK {
             String productID = jsonObject.optString("productID", "");
             String callbackUrl = jsonObject.optString("callback_url", "");
             String extendData = jsonObject.optString("extend_data", "");
-           /* String inAppId=checkAmount(amount,productID);
-            if(TextUtils.isEmpty(checkAmount(amount,productID))){
-                Log.e(TAG, "h5OrderJsonPay: 金额校验失败" );
-                return;
-            }*/
+
+            String currency=jsonObject.optString("currency", ""); //余额
+            String roleLevel=jsonObject.optString("role_level", "");//等级
+            String vipLevel=jsonObject.optString("vip_level", ""); //VIP等级
+            String partyName=jsonObject.optString("guild_name", ""); //帮会
+            String role_power=jsonObject.optString("role_power", ""); //战力
             HuaweiPayParam huaweiPayParam = new HuaweiPayParam.Builder()
                     .gameOrderNum(gameNum)
                     .price(amount)
@@ -299,13 +302,13 @@ public class PublicationSDK {
                     .productId(productID) //inapppay id
                     .extendData(extendData)
                     .build();
-            paramsAmoutPay(huaweiPayParam);
+            paramsAmoutPay(huaweiPayParam,currency,roleLevel,vipLevel,partyName);
         } catch (JSONException e) {
             e.printStackTrace();
         }
     }
 
-    public static void paramsAmoutPay(HuaweiPayParam platformPayParam){
+    public static void paramsAmoutPay(HuaweiPayParam platformPayParam, String currency, String roleLevel, String vipLevel, String partyName){
         Log.e(TAG, "paramsPay: "+platformPayParam.toString() );
         TreeMap paramsMap =  new TreeMap<String, String>();
         paramsMap.put("game_num", platformPayParam.getGameOrderNum());
@@ -342,6 +345,15 @@ public class PublicationSDK {
                             miBuyInfo.setCpOrderId( data.getNumber() );
                             miBuyInfo.setCpUserInfo( data.getNumber() );
                             miBuyInfo.setAmount( yuan );
+                            Bundle mBundle = new Bundle();
+                            mBundle.putString(GameInfoField.GAME_USER_BALANCE, currency); //⽤⼾余额
+                            mBundle.putString(GameInfoField.GAME_USER_GAMER_VIP,vipLevel); //vip 等级
+                            mBundle.putString(GameInfoField.GAME_USER_LV, roleLevel); //⻆⾊等级
+                            mBundle.putString(GameInfoField.GAME_USER_PARTY_NAME, partyName); //⼯会，帮派
+                            mBundle.putString(GameInfoField.GAME_USER_ROLE_NAME,platformPayParam.getRoleName());
+                            mBundle.putString(GameInfoField.GAME_USER_ROLEID, platformPayParam.getRoleID()); //⻆⾊id
+                            mBundle.putString(GameInfoField.GAME_USER_SERVER_NAME,platformPayParam.getServerName() ); //所在服务器
+                            miBuyInfo.setExtraInfo(mBundle); //设置⽤⼾信息
                             try
                             {
                                 MiCommplatform.getInstance().miUniPay(mActivity, miBuyInfo, new OnPayProcessListener() {
